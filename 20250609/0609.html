@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>水果 AR 展示</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    #ar-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div id="ar-container"></div>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+        container: document.querySelector("#ar-container"),
+        imageTargetSrc: "./appie.mind", // 初始先載入 appie
+        maxTrack: 1
+      });
+      const { renderer, scene, camera } = mindarThree;
+      const loader = new THREE.GLTFLoader();
+      const targets = [
+        { mindFile: "appie.mind", modelFile: "apple.glb" },
+        { mindFile: "banana.mind", modelFile: "grape.glb" },
+        { mindFile: "grape.mind", modelFile: "grape.glb" },
+      ];
+      for (let i = 0; i < targets.length; i++) {
+        const { mindFile, modelFile } = targets[i];
+        const subMindar = new window.MINDAR.IMAGE.MindARThree({
+          container: document.querySelector("#ar-container"),
+          imageTargetSrc: "./" + mindFile,
+          maxTrack: 1
+        });
+        const { scene: subScene, camera: subCamera, renderer: subRenderer } = subMindar;
+        const anchor = subMindar.addAnchor(0);
+        loader.load("./" + modelFile, (gltf) => {
+          const model = gltf.scene;
+          model.scale.set(0.4, 0.4, 0.4);
+          anchor.group.add(model);
+          anchor.onTargetFound = () => console.log(`✅ 找到 ${mindFile}`);
+          anchor.onTargetLost = () => console.log(`❌ 失去 ${mindFile}`);
+        });
+        await subMindar.start();
+        subRenderer.setAnimationLoop(() => {
+          subRenderer.render(subScene, subCamera);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
